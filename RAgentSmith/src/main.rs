@@ -9,15 +9,8 @@ const DEFAULT_MODEL: &str = "mistral-medium";
 
 
 #[derive(Debug, Clone)]
-pub struct PromptDefinition {
-    name: String,
-    description: String,
-    parameters: String,
-}
-
-#[derive(Debug, Clone)]
 pub struct Agent {
-    prompt: PromptDefinition,
+    prompt: String,
     token_count: i32,
     api_key: String,
     model: String,
@@ -61,9 +54,14 @@ pub struct Usage {
 }
 
 impl Agent {
-    fn new(key: String, prompt_definition: PromptDefinition) -> Self {
+    fn new(key: String, prompt: String) -> Self {
+        if prompt.is_empty() {
+            // Set default prompt
+            let prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+        };
+
         let mut agent = Self {
-            prompt: prompt_definition,
+            prompt: prompt,
             model: String::from(DEFAULT_MODEL),
             token_count: 0,
             api_key: key,
@@ -77,22 +75,24 @@ impl Agent {
 
         agent
     }
+
+    fn set_prompt(self: &mut Self, prompt_text: String) {
+        self.prompt = String::from(prompt_text); 
+    }
 }
 
-impl PromptDefinition {
-    fn default_prompt() -> Self {
-        PromptDefinition{
-            name: String::from("Default"),
-            description: String::from("Default Prompt"),
-            parameters: String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y"),
-        }
-    }   
-}
+
 
 fn main(){
-    let agent = Agent::new(String::from("test"), PromptDefinition::default_prompt());
+    let mut agent = Agent::new(String::from("test"), String::from("whewrwef"));
     println!("Hello, {ROLE_USER}! Today is {}. Enjoy your day!", get_date());
-    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt.parameters)
+    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt);
+
+    agent.set_prompt(String::from("Wow this shit is hard"));
+
+    println!("The prompt is {}", agent.prompt);
+    
+
 }
 
 fn get_date() -> String {
