@@ -8,9 +8,6 @@ const DEFAULT_MODEL: &str = "mistral-medium";
 
 
 
-
-
-
 #[derive(Debug, Clone)]
 pub struct PromptDefinition {
     name: String,
@@ -20,7 +17,7 @@ pub struct PromptDefinition {
 
 #[derive(Debug, Clone)]
 pub struct Agent {
-    //prompt: PromptDefinition,
+    prompt: PromptDefinition,
     token_count: i32,
     api_key: String,
     model: String,
@@ -64,9 +61,9 @@ pub struct Usage {
 }
 
 impl Agent {
-    fn new(key: String) -> Self {
+    fn new(key: String, prompt_definition: PromptDefinition) -> Self {
         let mut agent = Self {
-            //prompt: &PromptDefinition,
+            prompt: prompt_definition,
             model: String::from(DEFAULT_MODEL),
             token_count: 0,
             api_key: key,
@@ -82,13 +79,20 @@ impl Agent {
     }
 }
 
+impl PromptDefinition {
+    fn default_prompt() -> Self {
+        PromptDefinition{
+            name: String::from("Default"),
+            description: String::from("Default Prompt"),
+            parameters: String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y"),
+        }
+    }   
+}
+
 fn main(){
-    // const DEFAULT_PROMPT: &PromptDefinition = &PromptDefinition{
-    //     name: String::from("Default"),
-    //     description: String::from("Default Prompt"),
-    //     parameters: format!("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: {}", get_date()),
-    // };
+    let agent = Agent::new(String::from("test"), PromptDefinition::default_prompt());
     println!("Hello, {ROLE_USER}! Today is {}. Enjoy your day!", get_date());
+    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt.parameters)
 }
 
 fn get_date() -> String {
