@@ -148,20 +148,83 @@ impl Agent {
         Ok(chat_response.choices[0].message.clone())
     }
 
+    fn get_flags() -> Self {
+        let args: Vec<String> = env::args().collect();
+        let mut prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+        let mut model = String::new();
+        let mut api_key = String::new();
+        let mut flag = &String::new(); 
+        let mut arg: &String = &String::new();
+        let mut messages: Vec<Message> = vec![];
+
+        for i in 0..args.len() {
+            flag = &args[i];
+            arg = if i + 1 < args.len() {
+                &args[i + 1]
+            } else {
+                continue;
+            };
+
+            match flag.as_str() {
+                "-key" => {
+                    if arg.to_string().is_empty() {
+                        eprintln!("Environment variable API_KEY not set, exiting...");
+                        panic!();
+                    } else {
+                        api_key = arg.to_string();
+                    }
+                },
+                "-prompt" => {
+                    if !arg.to_string().is_empty(){
+                        prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+                    } else {
+                        prompt = arg.to_string();
+                    }
+                },
+                "-model" => {
+                    model = arg.to_string();
+                    println!("{}", model);
+                },
+                "-message" => {
+                    let newmessage = Message {
+                        role: ROLE_USER.to_string(),
+                        content: arg.to_string(),
+                    };
+                    messages.push(newmessage)
+                },
+                "-messageassistant" => {
+                    let newmessage = Message {
+                        role: ROLE_ASSISTANT.to_string(),
+                        content: arg.to_string(),
+                    };
+                    messages.push(newmessage)
+                },
+                _ => {}
+            };
+
+        }
+
+        let mut agent = Self {
+            prompt: prompt,
+            model: model,
+            token_count: 0,
+            api_key: api_key,
+            messages: messages,
+        };
+
+        agent
+    }
 }
 
 
 
 fn main(){
-    let mut agent = Agent::new(String::from("4W2bNZ1ga3xwgxYVaRPxBIre417uzLxt"), String::from("whewrwef"));
-    println!("Hello, {ROLE_USER}! Today is {}. Enjoy your day!", get_date());
-    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt);
+    let mut agent = Agent::get_flags();
 
-    agent.set_prompt(String::from("Wow this shit is hard"));
+    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt);
 
     println!("The prompt is {}", agent.prompt);
 
-    agent.add_message(String::from("user"), String::from("Are you there"));
     agent.get_response();
 
 }
