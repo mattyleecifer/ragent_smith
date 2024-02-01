@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::error::Error;
 use std::fs;
+use std::io;
+use std::process;
 
 const ROLE_USER: &str = "user";
 const ROLE_ASSISTANT: &str = "assistant";
@@ -153,12 +155,18 @@ impl Agent {
         let mut prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
         let mut model = String::new();
         let mut api_key = String::new();
-        let mut flag = &String::new(); 
+        let mut flag: &String = &String::new(); 
         let mut arg: &String = &String::new();
         let mut messages: Vec<Message> = vec![];
+        let mut consoleflag: bool = false;
 
         for i in 0..args.len() {
             flag = &args[i];
+            
+            if flag == "-console" {
+                consoleflag = true;
+            }
+
             arg = if i + 1 < args.len() {
                 &args[i + 1]
             } else {
@@ -212,7 +220,34 @@ impl Agent {
             messages: messages,
         };
 
+        if consoleflag {
+            agent.console();
+            println!("failed to call");
+        }
+
         agent
+    }
+
+    fn console(self: &mut Self) {
+        loop {
+            println!("User:");
+
+            let mut input = String::new();
+
+            io::stdin()
+                .read_line(&mut input)
+                .expect("Failed to read line");
+
+            if input.trim() == "q" {
+                process::exit(0);
+            };
+
+            self.add_message(ROLE_USER.to_string(), input);
+
+            println!("Agent:");
+            self.get_response();
+
+        }
     }
 }
 
@@ -221,11 +256,11 @@ impl Agent {
 fn main(){
     let mut agent = Agent::get_flags();
 
-    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt);
+    // println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt);
 
-    println!("The prompt is {}", agent.prompt);
+    // println!("The prompt is {}", agent.prompt);
 
-    agent.get_response();
+    // agent.get_response();
 
 }
 
