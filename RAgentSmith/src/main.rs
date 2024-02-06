@@ -13,12 +13,12 @@ const ROLE_USER: &str = "user";
 const ROLE_ASSISTANT: &str = "assistant";
 const ROLE_SYSTEM: &str = "system";
 const DEFAULT_MODEL: &str = "mistral-medium";
-
+const MISTRAL_API: &str = "https://api.mistral.ai/v1/chat/completions";
+const OPENAI_API: &str = "https://api.openai.com/v1/chat/completions";
 
 
 #[derive(Debug, Clone)]
 pub struct Agent {
-    prompt: String,
     token_count: i32,
     api_key: String,
     model: String,
@@ -30,7 +30,7 @@ pub struct Message {
     role: String,
     content: String,
 }
-
+    
 #[derive(Debug, Clone, Serialize)]
 pub struct RequestBody {
     model: String,
@@ -62,17 +62,24 @@ pub struct Usage {
 }
 
 impl Agent {
-    fn new(key: String, prompt: String) -> Self {
-        if prompt.is_empty() {
+    fn new(key: &String, prompt_text: &String) -> Self {
+        let mut prompt = Message {
+            role: ROLE_SYSTEM.to_string(),
+            content: String::new(),
+        };
+
+        if prompt_text.is_empty() {
             // Set default prompt
-            let prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+            prompt.content = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+
+        } else {
+            prompt.content = prompt_text.to_string();
         };
 
         let mut agent = Self {
-            prompt: prompt,
             model: String::from(DEFAULT_MODEL),
             token_count: 0,
-            api_key: key,
+            api_key: key.to_string(),
             messages: Vec::new(),
         };
 
@@ -84,14 +91,21 @@ impl Agent {
         agent
     }
 
-    fn set_prompt(self: &mut Self, prompt_text: String) {
-        self.prompt = String::from(prompt_text); 
+    fn set_prompt(self: &mut Self, prompt_text: &String) {
+        let mut prompt = Message {
+            role: ROLE_SYSTEM.to_string(),
+            content: prompt_text.to_string(),
+        };
+
+        self.messages = Vec::new();
+
+        self.messages.push(prompt)
     }
 
     fn get_model_URL(&self) -> String {
         let url = match &self.model[..] {
-            model if model.starts_with("mistral") => "https://api.mistral.ai/v1/chat/completions".to_string(),
-            model if model.starts_with("gpt") => "https://api.openai.com/v1/chat/completions".to_string(),
+            model if model.starts_with("mistral") => MISTRAL_API.to_string(),
+            model if model.starts_with("gpt") => OPENAI_API.to_string(),
             _ => {
                 println!("Error: Invalid model");
                 "".to_string()
@@ -100,15 +114,15 @@ impl Agent {
         url
     }
 
-    fn add_message(self: &mut Self, role: String, content: String) {
+    fn add_message(self: &mut Self, role: &str, content: &String) {
         let message = Message {
-            role,
-            content,
+            role: role.to_string(),
+            content: content.to_string(),
         };
         self.messages.push(message)
     }
 
-    fn update_token_count(self: &mut Self, total_tokens: i32) {
+    fn update_token_count(self: &mut Self, total_tokens: &i32) {
         self.token_count += total_tokens
     }
 
@@ -125,6 +139,7 @@ impl Agent {
         headers.insert(ACCEPT, HeaderValue::from_static("application/json"));
         headers.insert(AUTHORIZATION, HeaderValue::from_str(&format!("Bearer {}", self.api_key))?);
 
+        
         let client = Client::new();
         let response = client.post(&self.get_model_URL())
                              .headers(headers)
@@ -141,9 +156,9 @@ impl Agent {
             )));
         }
 
-        self.update_token_count(chat_response.usage.total_tokens);
+        self.update_token_count(&chat_response.usage.total_tokens);
 
-        self.add_message(String::from("assistant"), chat_response.choices[0].message.content.clone());
+        self.add_message(ROLE_ASSISTANT, &chat_response.choices[0].message.content);
 
         println!("{}", chat_response.choices[0].message.content);
 
@@ -152,7 +167,10 @@ impl Agent {
 
     fn get_flags() -> Self {
         let args: Vec<String> = env::args().collect();
-        let mut prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+        let mut prompt = Message {
+            role: ROLE_SYSTEM.to_string(),
+            content: String::new(),
+        };
         let mut model = String::new();
         let mut api_key = String::new();
         let mut flag: &String = &String::new(); 
@@ -183,11 +201,12 @@ impl Agent {
                     }
                 },
                 "-prompt" => {
-                    if !arg.to_string().is_empty(){
-                        prompt = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+                    if arg.to_string().is_empty(){
+                        prompt.content = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
                     } else {
-                        prompt = arg.to_string();
+                        prompt.content = arg.to_string();
                     }
+                    
                 },
                 "-model" => {
                     model = arg.to_string();
@@ -213,13 +232,14 @@ impl Agent {
         }
 
         let mut agent = Self {
-            prompt: prompt,
             model: model,
             token_count: 0,
             api_key: api_key,
             messages: messages,
         };
 
+        agent.messages.push(prompt);
+        
         if consoleflag {
             agent.console();
             println!("failed to call");
@@ -242,7 +262,7 @@ impl Agent {
                 process::exit(0);
             };
 
-            self.add_message(ROLE_USER.to_string(), input);
+            self.add_message(ROLE_USER, &input);
 
             println!("Agent:");
             self.get_response();
@@ -256,11 +276,11 @@ impl Agent {
 fn main(){
     let mut agent = Agent::get_flags();
 
-    // println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.prompt);
+    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.messages[0].content);
 
-    // println!("The prompt is {}", agent.prompt);
+    // println!("The prompt is d{}", agent.prompt);
 
-    // agent.get_response();
+    agent.get_response();
 
 }
 
