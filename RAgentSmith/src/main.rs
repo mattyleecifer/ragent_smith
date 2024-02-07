@@ -160,7 +160,7 @@ impl Agent {
 
         self.add_message(ROLE_ASSISTANT, &chat_response.choices[0].message.content);
 
-        println!("{}", chat_response.choices[0].message.content);
+        // println!("{}", chat_response.choices[0].message.content);
 
         Ok(chat_response.choices[0].message.clone())
     }
@@ -261,8 +261,16 @@ impl Agent {
             self.add_message(ROLE_USER, &input);
 
             println!("Agent:");
-            self.get_response();
-
+            let result = self.get_response();
+            match result {
+                Ok(message) => {
+                    println!("{}", message.content);
+                    println!("Total tokens: {}\n", self.token_count)
+                },
+                Err(error) => {
+                    println!("Error in getting response: {}", error);
+                },
+            }
         }
     }
 }
@@ -276,10 +284,19 @@ fn main(){
         agent.console();
         println!("failed to call");
     } else {
-        agent.get_response();
+        let result = agent.get_response();
+        match result {
+            Ok(message) => {
+                println!("{}", message.content);
+                println!("Total tokens: {}\n", agent.token_count)
+            },
+            Err(error) => {
+                println!("Error in getting response: {}", error);
+            },
+        }
     }
 
-    println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.messages[0].content);
+    // println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.messages[0].content);
 
     // println!("The prompt is d{}", agent.prompt);
 
