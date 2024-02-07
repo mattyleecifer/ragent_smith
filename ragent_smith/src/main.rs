@@ -206,7 +206,7 @@ impl Agent {
                     } else {
                         newmessage.content = arg.to_string();
                     };   
-                    messages.push(newmessage);
+                    messages.insert(0, newmessage);
                     
                 },
                 "-model" => {
