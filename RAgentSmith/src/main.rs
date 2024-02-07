@@ -165,12 +165,8 @@ impl Agent {
         Ok(chat_response.choices[0].message.clone())
     }
 
-    fn get_flags() -> Self {
+    fn get_flags() -> (Self, bool) {
         let args: Vec<String> = env::args().collect();
-        let mut prompt = Message {
-            role: ROLE_SYSTEM.to_string(),
-            content: String::new(),
-        };
         let mut model = String::new();
         let mut api_key = String::new();
         let mut flag: &String = &String::new(); 
@@ -201,11 +197,16 @@ impl Agent {
                     }
                 },
                 "-prompt" => {
+                    let mut newmessage = Message {
+                        role: ROLE_SYSTEM.to_string(),
+                        content: String::new(),
+                    };
                     if arg.to_string().is_empty(){
-                        prompt.content = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y");
+                        newmessage.content = String::from("You are a helpful assistant. Please generate truthful, accurate, and honest responses while also keeping your answers succinct and to-the-point. Today's date is: %B %d, %Y")
                     } else {
-                        prompt.content = arg.to_string();
-                    }
+                        newmessage.content = arg.to_string();
+                    };   
+                    messages.push(newmessage);
                     
                 },
                 "-model" => {
@@ -238,14 +239,9 @@ impl Agent {
             messages: messages,
         };
 
-        agent.messages.push(prompt);
-        
-        if consoleflag {
-            agent.console();
-            println!("failed to call");
-        }
 
-        agent
+
+        (agent, consoleflag)
     }
 
     fn console(self: &mut Self) {
@@ -274,13 +270,19 @@ impl Agent {
 
 
 fn main(){
-    let mut agent = Agent::get_flags();
+    let (mut agent, consoleflag) = Agent::get_flags();
+
+    if consoleflag {
+        agent.console();
+        println!("failed to call");
+    } else {
+        agent.get_response();
+    }
 
     println!("Your agent key is {} and the prompt is {}", agent.api_key, agent.messages[0].content);
 
     // println!("The prompt is d{}", agent.prompt);
 
-    agent.get_response();
 
 }
 
